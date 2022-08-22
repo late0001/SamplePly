@@ -1,11 +1,23 @@
 package com.jd.sampleply;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.ImageFormat;
+import android.graphics.Matrix;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.media.AudioTrack;
+import android.media.Image;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
+import android.os.Environment;
 import android.util.Log;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
@@ -127,7 +139,135 @@ public class CodecState {
     public boolean isEnded() {
         return mSawInputEOS && mSawOutputEOS;
     }
+    final static int YUV420P = 0;
+    final static int YUV420SP = 1;
+    final static int NV21 = 2;
+    static int width ;
+    static int height ;
+    //根据image获取yuv值-------------------NEW
+    public static byte[] getBytesFromImageAsType(Image image, int type){
+        try {
+            //获取源数据，如果是YUV格式的数据planes.length = 3
+            //plane[i]里面的实际数据可能存在byte[].length <= capacity (缓冲区总大小)
+            final Image.Plane[] planes = image.getPlanes();
 
+            //数据有效宽度，一般的，图片width <= rowStride，这也是导致byte[].length <= capacity的原因
+            // 所以我们只取width部分
+            width = image.getWidth();
+            height = image.getHeight();
+
+            //此处用来装填最终的YUV数据，需要1.5倍的图片大小，因为Y U V 比例为 4:1:1 （这里是YUV_420_888）
+            byte[] yuvBytes = new byte[width * height * ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8];
+            //目标数组的装填到的位置
+            int dstIndex = 0;
+
+            //临时存储uv数据的
+            byte uBytes[] = new byte[width * height / 4];
+            byte vBytes[] = new byte[width * height / 4];
+            int uIndex = 0;
+            int vIndex = 0;
+
+            int pixelsStride, rowStride;
+            for (int i = 0; i < planes.length; i++) {
+                pixelsStride = planes[i].getPixelStride();
+                rowStride = planes[i].getRowStride();
+
+                ByteBuffer buffer = planes[i].getBuffer();
+
+                //如果pixelsStride==2，一般的Y的buffer长度=640*480，UV的长度=640*480/2-1
+                //源数据的索引，y的数据是byte中连续的，u的数据是v向左移以为生成的，两者都是偶数位为有效数据
+                byte[] bytes = new byte[buffer.capacity()];
+                buffer.get(bytes);
+
+                int srcIndex = 0;
+                if (i == 0) {
+                    //直接取出来所有Y的有效区域，也可以存储成一个临时的bytes，到下一步再copy
+                    for (int j = 0; j < height; j++) {
+                        System.arraycopy(bytes, srcIndex, yuvBytes, dstIndex, width);
+                        srcIndex += rowStride;
+                        dstIndex += width;
+                    }
+                } else if (i == 1) {
+                    //根据pixelsStride取相应的数据
+                    for (int j = 0; j < height / 2; j++) {
+                        for (int k = 0; k < width / 2; k++) {
+                            uBytes[uIndex++] = bytes[srcIndex];
+                            srcIndex += pixelsStride;
+                        }
+                        if (pixelsStride == 2) {
+                            srcIndex += rowStride - width;
+                        } else if (pixelsStride == 1) {
+                            srcIndex += rowStride - width / 2;
+                        }
+                    }
+                } else if (i == 2) {
+                    //根据pixelsStride取相应的数据
+                    for (int j = 0; j < height / 2; j++) {
+                        for (int k = 0; k < width / 2; k++) {
+                            vBytes[vIndex++] = bytes[srcIndex];
+                            srcIndex += pixelsStride;
+                        }
+                        if (pixelsStride == 2) {
+                            srcIndex += rowStride - width;
+                        } else if (pixelsStride == 1) {
+                            srcIndex += rowStride - width / 2;
+                        }
+                    }
+                }
+            }
+            //   image.close();
+            //根据要求的结果类型进行填充
+            switch (type) {
+                case  YUV420P:
+                    System.arraycopy(uBytes, 0, yuvBytes, dstIndex, uBytes.length);
+                    System.arraycopy(vBytes, 0, yuvBytes, dstIndex + uBytes.length, vBytes.length);
+                    break;
+                case YUV420SP:
+                    for (int i = 0; i < vBytes.length; i++) {
+                        yuvBytes[dstIndex++] = uBytes[i];
+                        yuvBytes[dstIndex++] = vBytes[i];
+                    }
+                    break;
+                case NV21:
+                    for (int i = 0; i < vBytes.length; i++) {
+                        yuvBytes[dstIndex++] = vBytes[i];
+                        yuvBytes[dstIndex++] = uBytes[i];
+                    }
+                    break;
+            }
+            return yuvBytes;
+        } catch (final Exception e) {
+            if (image != null) {
+                image.close();
+            }
+        }
+        return null;
+    }
+
+    private Bitmap getBitmapFromYUV(byte[] date, int width, int height, int rotation) {
+        //使用YuvImage---》NV21
+        YuvImage yuvImage = new YuvImage(date, ImageFormat.NV21,width,height,null);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        yuvImage.compressToJpeg(new Rect(0,0,width,height),20,baos);
+        byte[] jdate =baos.toByteArray();
+        BitmapFactory.Options bitmapFatoryOptions = new BitmapFactory.Options();
+        bitmapFatoryOptions.inPreferredConfig = Bitmap.Config.RGB_565;
+        bitmapFatoryOptions.inSampleSize = 4;
+        if(rotation == 0){
+            Bitmap bmp = BitmapFactory.decodeByteArray(jdate,0,jdate.length,bitmapFatoryOptions);
+            return bmp;
+        }else {
+            Matrix m = new Matrix();
+            m.postRotate(rotation);
+            Bitmap bmp = BitmapFactory.decodeByteArray(jdate,0,jdate.length,bitmapFatoryOptions);
+            Bitmap bml = Bitmap.createBitmap(bmp,0,0,bmp.getWidth(),bmp.getHeight(),m,true);
+            return bml;
+        }
+    }
+
+
+    static int imageNum = 0;
     /**
      * doSomeWork() is the worker function that does all buffer handling and decoding works.
      * It first reads data from {@link MediaExtractor} and pushes it into {@link MediaCodec};
@@ -155,6 +295,36 @@ public class CodecState {
         } else if (indexOutput != MediaCodec.INFO_TRY_AGAIN_LATER) {
             mAvailableOutputBufferIndices.add(indexOutput);
             mAvailableOutputBufferInfos.add(info);
+        //}else{
+            boolean doRender = (info.size !=0);
+            //获取图片并保存,getOutputImage格式是YUV_420_888
+            Image image = mCodec.getOutputImage(indexOutput);
+            mCodec.getOutputBuffer(indexOutput);
+            Log.d("Test","成功获取到图片"+"SSSSSSSSSSSSSSSSSSSSSSS");
+            imageNum++;
+            //dateFromImage(image);
+            //使用新方法来获取yuv数据
+            byte[] bytes = getBytesFromImageAsType(image,2);
+
+            //根据yuv数据获取Bitmap
+            Bitmap bitmap = getBitmapFromYUV(bytes,width,height, 0 /*rotation*/);
+            //保存图片
+            if(bitmap != null){
+                //显示图片
+                String businesslogofile= Environment.getExternalStorageDirectory()+"/SGPictures/logo"+imageNum+".png";
+                File file = new File(businesslogofile);
+                File parentFile = file.getParentFile();
+                if (!parentFile.exists()) {
+                    parentFile.mkdirs();
+                }
+                try {
+                    bitmap.compress(Bitmap.CompressFormat.JPEG,100,new FileOutputStream(file));
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+                Log.d("Test","图片导入成功");
+            }
+
         }
 
         while (drainOutputBuffer()) {
