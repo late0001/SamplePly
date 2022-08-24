@@ -2,13 +2,18 @@ package com.jd.sampleply;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.SurfaceHolder;
@@ -35,9 +40,36 @@ public class PlayerActivity extends AppCompatActivity implements SurfaceHolder.C
     private static final int SLEEP_TIME_MS = 1000;
     private static final long PLAY_TIME_MS = TimeUnit.MILLISECONDS.convert(4, TimeUnit.MINUTES);
 
-    public void requestPermission(Context context) {
-         SettingsCompat.requestPermission(context);
+    public boolean checkPermission(Context context) {
+        return SettingsCompat.checkPermission(context);
     }
+
+    public void requestPermission(Context context) {
+         //SettingsCompat.requestPermission(context);
+        if (Build.VERSION.SDK_INT >= 23) {// 6.0
+            String[] perms = {
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_PHONE_STATE};
+            for (String p : perms) {
+                int f = ContextCompat.checkSelfPermission(PlayerActivity.this, p);
+                Log.d("---", String.format("%s - %d", p, f));
+                if (f != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(perms, 0XCF);
+                    break;
+                }
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ) {// android 11  且 不是已经被拒绝
+            // 先判断有没有权限
+            if (!Environment.isExternalStorageManager()) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivityForResult(intent, 1024);
+            }
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,7 +92,9 @@ public class PlayerActivity extends AppCompatActivity implements SurfaceHolder.C
         //Intent intent = getIntent();
         //mFileUrl = intent.getData();
         mFileUrl = getFile();
-        requestPermission(this);
+        if(!checkPermission(this)) {
+            requestPermission(this);
+        }
         try {
             Thread.sleep(4000);
         } catch (InterruptedException e) {

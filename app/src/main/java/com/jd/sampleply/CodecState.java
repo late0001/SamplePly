@@ -296,34 +296,7 @@ public class CodecState {
             mAvailableOutputBufferIndices.add(indexOutput);
             mAvailableOutputBufferInfos.add(info);
         //}else{
-            boolean doRender = (info.size !=0);
-            //获取图片并保存,getOutputImage格式是YUV_420_888
-            Image image = mCodec.getOutputImage(indexOutput);
-            mCodec.getOutputBuffer(indexOutput);
-            Log.d("Test","成功获取到图片"+"SSSSSSSSSSSSSSSSSSSSSSS");
-            imageNum++;
-            //dateFromImage(image);
-            //使用新方法来获取yuv数据
-            byte[] bytes = getBytesFromImageAsType(image,2);
 
-            //根据yuv数据获取Bitmap
-            Bitmap bitmap = getBitmapFromYUV(bytes,width,height, 0 /*rotation*/);
-            //保存图片
-            if(bitmap != null){
-                //显示图片
-                String businesslogofile= Environment.getExternalStorageDirectory()+"/SGPictures/logo"+imageNum+".png";
-                File file = new File(businesslogofile);
-                File parentFile = file.getParentFile();
-                if (!parentFile.exists()) {
-                    parentFile.mkdirs();
-                }
-                try {
-                    bitmap.compress(Bitmap.CompressFormat.JPEG,100,new FileOutputStream(file));
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                }
-                Log.d("Test","图片导入成功");
-            }
 
         }
 
@@ -496,6 +469,37 @@ public class CodecState {
                 render = true;
                 mPresentationTimeUs = info.presentationTimeUs;
             }
+            //==========================================================
+            boolean doRender = (info.size !=0);
+            //获取图片并保存,getOutputImage格式是YUV_420_888
+            Image image = mCodec.getOutputImage(index);
+            mCodec.getOutputBuffer(index);
+            Log.d("Test","成功获取到图片"+"SSSSSSSSSSSSSSSSSSSSSSS");
+            imageNum++;
+            //dateFromImage(image);
+            //使用新方法来获取yuv数据
+            byte[] bytes = getBytesFromImageAsType(image,2);
+
+            //根据yuv数据获取Bitmap
+            Bitmap bitmap = getBitmapFromYUV(bytes,width,height, 0 /*rotation*/);
+            //保存图片
+            if(bitmap != null){
+                //显示图片
+                String businesslogofile= Environment.getExternalStorageDirectory()+"/SGPictures/logo"+imageNum+".png";
+                File file = new File(businesslogofile);
+                File parentFile = file.getParentFile();
+                if (!parentFile.exists()) {
+                    parentFile.mkdirs();
+                }
+                try {
+                    bitmap.compress(Bitmap.CompressFormat.JPEG,100,new FileOutputStream(file));
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+                Log.d("Test","图片导入成功");
+            }
+
+            //=========================================================
 
             //mCodec.releaseOutputBuffer(index, render);
             mCodec.releaseOutputBuffer(index, realTimeUs*1000);
