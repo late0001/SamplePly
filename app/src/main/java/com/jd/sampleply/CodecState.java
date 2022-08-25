@@ -473,7 +473,7 @@ public class CodecState {
             boolean doRender = (info.size !=0);
             //获取图片并保存,getOutputImage格式是YUV_420_888
             Image image = mCodec.getOutputImage(index);
-            mCodec.getOutputBuffer(index);
+           // mCodec.getOutputBuffer(index);
             Log.d("Test","成功获取到图片"+"SSSSSSSSSSSSSSSSSSSSSSS");
             imageNum++;
             //dateFromImage(image);
