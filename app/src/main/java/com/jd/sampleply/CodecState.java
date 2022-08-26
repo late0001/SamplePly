@@ -244,23 +244,23 @@ public class CodecState {
         return null;
     }
 
-    private Bitmap getBitmapFromYUV(byte[] date, int width, int height, int rotation) {
+    private Bitmap getBitmapFromYUV(byte[] data, int width, int height, int rotation) {
         //使用YuvImage---》NV21
-        YuvImage yuvImage = new YuvImage(date, ImageFormat.NV21,width,height,null);
+        YuvImage yuvImage = new YuvImage(data, ImageFormat.NV21,width,height,null);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-        yuvImage.compressToJpeg(new Rect(0,0,width,height),20,baos);
-        byte[] jdate =baos.toByteArray();
+        yuvImage.compressToJpeg(new Rect(0,0,width,height),100,baos);
+        byte[] jdata =baos.toByteArray();
         BitmapFactory.Options bitmapFatoryOptions = new BitmapFactory.Options();
-        bitmapFatoryOptions.inPreferredConfig = Bitmap.Config.RGB_565;
-        bitmapFatoryOptions.inSampleSize = 4;
+        bitmapFatoryOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;
+        bitmapFatoryOptions.inSampleSize = 1;
         if(rotation == 0){
-            Bitmap bmp = BitmapFactory.decodeByteArray(jdate,0,jdate.length,bitmapFatoryOptions);
+            Bitmap bmp = BitmapFactory.decodeByteArray(jdata, 0, jdata.length, bitmapFatoryOptions);
             return bmp;
         }else {
             Matrix m = new Matrix();
             m.postRotate(rotation);
-            Bitmap bmp = BitmapFactory.decodeByteArray(jdate,0,jdate.length,bitmapFatoryOptions);
+            Bitmap bmp = BitmapFactory.decodeByteArray(jdata,0,jdata.length,bitmapFatoryOptions);
             Bitmap bml = Bitmap.createBitmap(bmp,0,0,bmp.getWidth(),bmp.getHeight(),m,true);
             return bml;
         }
@@ -474,7 +474,7 @@ public class CodecState {
             //获取图片并保存,getOutputImage格式是YUV_420_888
             Image image = mCodec.getOutputImage(index);
            // mCodec.getOutputBuffer(index);
-            Log.d("Test","成功获取到图片"+"SSSSSSSSSSSSSSSSSSSSSSS");
+            Log.d("Test","==> 成功获取到图片");
             imageNum++;
             //dateFromImage(image);
             //使用新方法来获取yuv数据
@@ -496,7 +496,7 @@ public class CodecState {
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }
-                Log.d("Test","图片导入成功");
+                Log.d("Test","<== 图片保存成功");
             }
 
             //=========================================================
