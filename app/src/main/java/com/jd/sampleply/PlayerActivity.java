@@ -109,8 +109,9 @@ public class PlayerActivity extends AppCompatActivity implements SurfaceHolder.C
     public Uri getFile(){
 
         String path = getExternalStorageDirectory().toString();
-        path +="/Movies/Telegram/";
-        path += "VID_20220805_215345_727.mp4";
+        //path +="/Movies/Telegram/";
+        //path += "VID_20220805_215345_727.mp4";
+        path += "/video/1_777777777777716.mp4";
         // getFilesDir().getAbsolutePath();// /data/user/0/com.jd.sampleply/files
         // getExternalStorageDirectory().toString();// /storage/emulated/0
 

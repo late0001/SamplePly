@@ -210,12 +210,12 @@ public class MediaCodecPlayer implements MediaTimeProvider {
                     mime+"!");
             return false;
         }
-        //codec.configure(
-        //        format,
-        //        isVideo ? mSurfaceHolder.getSurface() : null, null, 0);
         codec.configure(
                 format,
-               null, null, 0);
+                isVideo ? mSurfaceHolder.getSurface() : null, null, 0);
+        /*codec.configure(
+                format,
+               null, null, 0);*/
 
 
         CodecState state;

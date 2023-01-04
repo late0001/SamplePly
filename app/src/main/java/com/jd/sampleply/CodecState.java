@@ -469,7 +469,7 @@ public class CodecState {
                 render = true;
                 mPresentationTimeUs = info.presentationTimeUs;
             }
-            //==========================================================
+           /* //==========================================================
             boolean doRender = (info.size !=0);
             //获取图片并保存,getOutputImage格式是YUV_420_888
             Image image = mCodec.getOutputImage(index);
@@ -481,7 +481,7 @@ public class CodecState {
             byte[] bytes = getBytesFromImageAsType(image,2);
 
             //根据yuv数据获取Bitmap
-            Bitmap bitmap = getBitmapFromYUV(bytes,width,height, 0 /*rotation*/);
+            Bitmap bitmap = getBitmapFromYUV(bytes,width,height, 0 /*rotation);
             //保存图片
             if(bitmap != null){
                 //显示图片
@@ -498,7 +498,7 @@ public class CodecState {
                 }
                 Log.d("Test","<== 图片保存成功");
             }
-
+            */
             //=========================================================
 
             //mCodec.releaseOutputBuffer(index, render);
